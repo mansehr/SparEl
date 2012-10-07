@@ -1,0 +1,18 @@
+#!/bin/bash
+
+
+echo Content-type: text/event-stream
+echo Cache-Control: no-cache
+echo ""
+
+lines=$1 
+
+if [ -z "$lines" ]; then
+	lines=1
+fi
+
+echo -n "data: "
+tail -n$lines /home/pi/data.txt
+echo ""
+echo ""
+

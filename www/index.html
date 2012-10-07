@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>Nuvarande:
+<div id="current">No W</div></h1>
+<br/>
+<!--<canvas id="time_graph" width="200" height="100" style="border:1px solid #000000;"></canvas>
+<embed src="time_graph.svg" id="time_graph_svg" width="200" height="100" />-->
+<div id="date"></div>
+
+<script src="raphael-min.js" type="text/javascript"></script>
+<script src="graph.js" type="text/javascript"></script>
+<script>
+graphInit();
+if(typeof(EventSource)!=="undefined")
+  {
+  var source=new EventSource("/cgi-bin/sparel-stream");
+  source.onmessage=function(event)
+    {
+	// [0] Datum, [1] Förbrukning
+	var dataArray = event.data.split(";");
+	var watts = dataArray[1];
+	watts = round(watts, 2);
+        graphAdd(dataArray[0].split(".")[0], watts);
+    document.getElementById("current").innerHTML=watts + " W";
+	document.getElementById("date").innerHTML=dataArray[0].split(".")[0];
+    };
+  }
+else
+  {
+  document.getElementById("result").innerHTML="Sorry, your browser does not support server-sent events...";
+  }
+
+	function round(val, decimals) {
+		var t = Math.pow(10,decimals);
+		return Math.round(val*t)/t;
+	}
+</script>
+<script type="text/javascript" src="time_graph.js"></script>
+<div id="result"></div>
+
+</body>
+</html>

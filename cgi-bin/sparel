@@ -1,0 +1,14 @@
+#!/bin/bash
+
+
+echo Content-type: text/plain
+echo ""
+
+lines=$1 
+
+if [ -z "$lines" ]; then
+	lines=1
+fi
+
+tail -n$lines /home/pi/data.txt
+
