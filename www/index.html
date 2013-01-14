@@ -1,43 +1,149 @@
 <!DOCTYPE html>
 <html>
-<body>
-<h1>Nuvarande:
-<div id="current">No W</div></h1>
-<br/>
-<!--<canvas id="time_graph" width="200" height="100" style="border:1px solid #000000;"></canvas>
-<embed src="time_graph.svg" id="time_graph_svg" width="200" height="100" />-->
-<div id="date"></div>
+<head>
+    <title>SparEl &Ouml;sterg&aring;rdsv&auml;gen</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js"></script>
+    <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+    <script type='text/javascript'>
+      google.load('visualization', '1', {packages:['gauge', ]});
+      google.load("visualization", "1", {packages: ["corechart"]});
 
-<script src="raphael-min.js" type="text/javascript"></script>
-<script src="graph.js" type="text/javascript"></script>
-<script>
-graphInit();
-if(typeof(EventSource)!=="undefined")
-  {
-  var source=new EventSource("/cgi-bin/sparel-stream");
-  source.onmessage=function(event)
-    {
-	// [0] Datum, [1] Förbrukning
-	var dataArray = event.data.split(";");
-	var watts = dataArray[1];
-	watts = round(watts, 2);
-        graphAdd(dataArray[0].split(".")[0], watts);
-    document.getElementById("current").innerHTML=watts + " W";
-	document.getElementById("date").innerHTML=dataArray[0].split(".")[0];
-    };
-  }
-else
-  {
-  document.getElementById("result").innerHTML="Sorry, your browser does not support server-sent events...";
-  }
+      google.setOnLoadCallback(drawCharts);
+
+
+
+      function drawCharts() {
+         drawGaugeChart();
+         drawLineChart();
+	
+
+/* Load historical data */ 
+	$.get('cgi-bin/sparel?100', function(data) {
+
+	var dataRows = data.split("\n");
+	var cnt = 0;
+	for(var i in dataRows) {
+	  
+	   // [0] Datum, [1] Förbrukning
+	        var dataArray = dataRows[i].split(";");
+
+                var watts = round(dataArray[1],2);
+                var date = dataArray[0].split(".")[0];
+	              linechart_data.addRow([ new Date(date), watts]);
+		      if((cnt++%10)==0) {
+                         linechart.draw(linechart_data, linechart_options);
+                      }
+	}
+           linechart.draw(linechart_data, linechart_options);
+		// Load new data when historical finished
+		initEventSource();
+	});
+      }
+
+      function drawGaugeChart() {
+
+	gaugechart_data = google.visualization.arrayToDataTable([
+          ['Label', 'Value'],
+          ['Current W', 0]
+        ]);
+
+	var maxCurrent = 13000;
+
+        gaugechart_options = {
+          width: 180, height: 180,
+          redFrom: maxCurrent*0.8, redTo: maxCurrent,
+          yellowFrom:maxCurrent*0.5, yellowTo: maxCurrent*0.8,
+	  greenFrom:0, greenTo: 2000,
+          minorTicks: 5,
+	  max: maxCurrent
+        };
+
+        gaugechart = new google.visualization.Gauge(document.getElementById('gaugechart_div'));
+        gaugechart.draw(gaugechart_data, gaugechart_options );
+      }
+
+      function drawLineChart() {
+
+	linechart_data = new google.visualization.DataTable();
+
+        linechart_data.addColumn('datetime', 'Time');
+        linechart_data.addColumn('number', 'Consumption');
+
+	if(screen.width < 500) {
+		chart_width = 500;
+	} else {
+		chart_width = (screen.width<window.width?screen.width:window.width);
+	}
+
+        linechart_options = {
+          title: 'Electric consumption history',
+	  hAxis: {title: "Time"},
+          vAxis: {title: "W", minValue: 0},
+	  width: chart_width,
+          animation: {
+            duration: 1000,
+            easing: 'in'
+          }
+        };
+
+        linechart = new google.visualization.LineChart(document.getElementById('linechart_div'));
+        linechart.draw(linechart_data, linechart_options );
+      }
+
+      function initEventSource() {
+        if(typeof(EventSource)!=="undefined")
+        {
+           var source=new EventSource("/cgi-bin/sparel-stream");
+           source.onmessage=function(event)
+           {
+           	// [0] Datum, [1] Förbrukning
+	        var dataArray = event.data.split(";");
+                var watts = round(dataArray[1],2);
+                var date = dataArray[0].split(".")[0];
+
+           document.getElementById("date").innerHTML=date;
+
+           gaugechart_data.setValue(0, 1, watts);
+           gaugechart.draw(gaugechart_data, gaugechart_options);
+
+	   linechart_data.removeRow(0);
+           linechart_data.addRow([ new Date(date), watts]);
+           linechart.draw(linechart_data, linechart_options);
+           };
+        } else {
+          document.getElementById("date").innerHTML="Sorry, your browser does not support server-sent events...";
+        }
+    }
 
 	function round(val, decimals) {
 		var t = Math.pow(10,decimals);
 		return Math.round(val*t)/t;
 	}
-</script>
-<script type="text/javascript" src="time_graph.js"></script>
-<div id="result"></div>
+
+	function switchon(switchid) {
+		$.get('cgi-bin/oncmd?'+switchid, function(data) {
+			//alert(data);
+		});
+	}
+	
+	function switchoff(switchid) {
+		$.get('cgi-bin/offcmd?'+switchid, function(data) {
+			//alert(data);
+		});
+	}
+    </script>
+  </head>
+<body>
+<div id="date"></div>
+<div id='gaugechart_div'></div>
+<div id="linechart_div"></div>
+<hr/>
+<a href="#" onclick="switchon(1)">on 1</a>
+<a href="#" onclick="switchoff(1)">off 1</a>
+<br/>
+<a href="#" onclick="switchon(2)">on 2</a>
+<a href="#" onclick="switchoff(2)">off 2</a>
+
 
 </body>
 </html>
