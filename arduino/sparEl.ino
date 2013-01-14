@@ -27,14 +27,23 @@ unsigned short bucketPtr = 0;
 // Incomming byte from serial
 int incomingByte = 0;
 
+const int switches = 3;
+int switchOn[] = {statusLedPin, 8, 10};
+int switchOff[] = {statusLedPin, 9, 11};
 
+int id = 0;
 // the setup routine runs once when you press reset:
 void setup() {
   // initialize serial communication at 9600 bits per second:
   Serial.begin(115200);
   // make the pushbutton's pin an input:
   pinMode(signalPin, INPUT);
-  pinMode(statusLedPin, OUTPUT);
+  
+  // Make the switch pins as output
+  for(int i = 0; i < switches; ++i) {
+    pinMode(switchOn[i], OUTPUT);
+    pinMode(switchOff[i], OUTPUT);
+  }
   
   ticksPerMinute[bucketPtr] = 0;
   
@@ -47,11 +56,36 @@ void setup() {
 
 inline void serialEvent() {
   if (Serial.available() > 0) {
-    incomingByte = Serial.read();
+    incomingByte = Serial.read()-48;
+
+    // Turn switch on or off
+    bool on = incomingByte & 1;
+    unsigned int switchid = incomingByte >> 1;
+
+
+  Serial.print("echo: ");
+  Serial.print(incomingByte);
+  Serial.print(", ");
+  Serial.print(on);
+  Serial.print(", ");
+  Serial.println(switchid);
+
     if(incomingByte == 0) {
-      digitalWrite(statusLedPin, LOW);
-    } else {
-      digitalWrite(statusLedPin, HIGH);
+      for(int i = 0; i < switches; ++i) {
+        digitalWrite(switchOn[i], LOW);
+        digitalWrite(switchOff[i], LOW);
+      }
+      Serial.println("ALL SWITCH OFF!");
+    } else if(switchid < switches){
+      if(on) {
+	Serial.print(switchOn[switchid]);
+	Serial.println(" SWITCH ON!");
+        digitalWrite(switchOn[switchid], HIGH);
+      } else {
+	Serial.print(switchOff[switchid]);
+	Serial.println(" SWITCH ON!");
+        digitalWrite(switchOff[switchid], HIGH);
+      }
     }
   }
 }
